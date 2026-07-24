@@ -1,4 +1,15 @@
 package com.ticketing.event.dto;
 
-public record EventResponse() {
+import java.time.Instant;
+
+public record EventResponse(
+        Long id,
+        String name,
+        String description,
+        String venue,
+        Instant startsAt,
+        Integer totalCapacity,
+        Instant createdAt,
+        Instant updatedAt
+) {
 }
