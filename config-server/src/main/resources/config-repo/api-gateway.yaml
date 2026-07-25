@@ -4,12 +4,20 @@ server:
 spring:
   cloud:
     gateway:
-      routes:
-        - id: event-service
-          uri: lb://event-service
-          predicates:
-            - Path=/api/events/**
-        - id: inventory-service
-          uri: lb://inventory-service
-          predicates:
-            - Path=/api/inventory/**
+      server:
+        webflux:
+          routes:
+            - id: event-service
+              uri: lb://event-service
+              predicates:
+                - Path=/api/events/**
+            - id: inventory-service
+              uri: lb://inventory-service
+              predicates:
+                - Path=/api/inventory/**
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway

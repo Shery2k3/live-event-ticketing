@@ -1,9 +1,6 @@
-package com.ticketing.event.exception;
-
-import org.springframework.http.ProblemDetail;
+package com.ticketing.inventory.exception;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.Map;
 
 public record ErrorResponse(
