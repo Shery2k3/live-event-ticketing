@@ -27,7 +27,7 @@ spring:
 security:
   jwt:
     # HS256 secret. Must be at least 32 bytes. Override with JWT_SECRET in real environments.
-    secret: ${JWT_SECRET:local-dev-secret-please-change-me-to-a-long-random-value-0123456789}
+    secret: ZJOzP3M3XUY6NAKPbZmCxKT1MjZWW7IuHxFXFSNyKCm
     expiration-minutes: 120
     issuer: live-event-ticketing
   users:
