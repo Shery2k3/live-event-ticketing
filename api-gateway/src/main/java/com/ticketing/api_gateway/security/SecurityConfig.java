@@ -63,7 +63,7 @@ public class SecurityConfig {
 				.formLogin(ServerHttpSecurity.FormLoginSpec::disable)
 				.authorizeExchange(exchange -> exchange
 						// public: login + health
-						.pathMatchers(HttpMethod.POST, "/auth/login").permitAll()
+						.pathMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
 						.pathMatchers("/actuator/health", "/actuator/info").permitAll()
 						// public browsing: anyone can view events and seat availability
 						.pathMatchers(HttpMethod.GET, "/api/events/**").permitAll()
