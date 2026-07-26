@@ -1,5 +1,6 @@
 package com.ticketing.event.dto;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 public record EventResponse(
@@ -9,6 +10,7 @@ public record EventResponse(
         String venue,
         Instant startsAt,
         Integer totalCapacity,
+        BigDecimal ticketPrice,
         Instant createdAt,
         Instant updatedAt
 ) {

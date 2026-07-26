@@ -28,4 +28,7 @@ public class Seat extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private SeatStatus status;
+
+    @Column(name = "booking_reference", length = 64)
+    private String bookingReference;
 }

@@ -2,6 +2,7 @@ package com.ticketing.inventory.controller;
 
 import com.ticketing.inventory.dto.AvailabilityResponse;
 import com.ticketing.inventory.dto.CreateSeatsRequest;
+import com.ticketing.inventory.dto.HoldSeatsRequest;
 import com.ticketing.inventory.dto.SeatResponse;
 import com.ticketing.inventory.service.InventoryService;
 import jakarta.validation.Valid;
@@ -39,5 +40,10 @@ public class InventoryController {
     @PostMapping("/seats/{seatId}/hold")
     public SeatResponse hold(@PathVariable Long seatId) {
         return inventoryService.holdSeat(seatId);
+    }
+
+    @PostMapping("/seats/hold")
+    public List<SeatResponse> holdSeats(@Valid @RequestBody HoldSeatsRequest request) {
+        return inventoryService.holdSeats(request);
     }
 }

@@ -6,6 +6,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 
@@ -31,4 +32,7 @@ public class Event extends BaseEntity {
 
     @Column(name = "total_capacity", nullable = false)
     private Integer totalCapacity;
+
+    @Column(name = "ticket_price", nullable = false, precision = 10, scale = 2)
+    private BigDecimal ticketPrice;
 }
