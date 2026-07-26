@@ -39,13 +39,13 @@ public class PaymentService {
             return;
         }
 
-        ChargeResult result = paymentGateway.charge(event.bookingReference(), event.amount());
+        ChargeResult result = paymentGateway.charge(event.bookingReference(), event.totalAmount());
 
         Payment payment = new Payment();
         payment.setTransactionRef(result.transactionRef());
         payment.setBookingReference(event.bookingReference());
         payment.setBookingId(event.bookingId());
-        payment.setAmount(event.amount());
+        payment.setAmount(event.totalAmount());
 
         if (result.success()) {
             payment.setStatus(PaymentStatus.COMPLETED);

@@ -14,7 +14,7 @@ public record SeatReservedEvent(
         Long eventId,
         Long userId,
         List<Long> seatIds,
-        BigDecimal amount,
+        BigDecimal totalAmount,
         Instant occurredAt
 ) {
 }
