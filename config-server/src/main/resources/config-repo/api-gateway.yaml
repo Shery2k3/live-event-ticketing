@@ -15,6 +15,14 @@ spring:
               uri: lb://inventory-service
               predicates:
                 - Path=/api/inventory/**
+            - id: booking-service
+              uri: lb://booking-service
+              predicates:
+                - Path=/api/bookings/**
+            - id: payment-service
+              uri: lb://payment-service
+              predicates:
+                - Path=/api/payments/**
 
 management:
   endpoints:
