@@ -309,7 +309,6 @@ Because the compose file pins the `latest` tag, `docker compose pull` always fet
 
 - Unit and slice tests run with `mvn test` in each module.
 - `scripts/e2e.mjs` runs an end-to-end check against a running stack, including login and a full booking.
-- `scripts/demo-saga.sh` walks through the saga for a demo.
 
 ## Troubleshooting
 
@@ -317,10 +316,3 @@ Because the compose file pins the `latest` tag, `docker compose pull` always fet
 - Port 5432 is already in use. The stack publishes PostgreSQL on host port 5433 to avoid this. Connect external tools to 5433.
 - Connecting to Kafka from the host uses `localhost:9092`. Services inside the Compose network use `kafka:19092`.
 - Configuration values look wrong in Docker. Check the service's `environment:` block in `docker-compose.yml`, since environment variables override config server values.
-
-## Roadmap
-
-- Tag images with the git commit SHA or a semantic version alongside `latest`, so deployments are reproducible and can be rolled back.
-- Add Kubernetes manifests or a Helm chart for multi-node deployment and autoscaling.
-- Add Resilience4j retries and circuit breakers on the synchronous calls.
-- Add a transactional outbox for reliable event publishing.
