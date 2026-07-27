@@ -1,4 +1,36 @@
+# Full stack: infrastructure + all Spring Boot services.
+#
+# The application containers reach each other by compose service name on the
+# default network. Every service still keeps localhost values in config-repo for
+# local (non-docker) runs; here we override only the connection endpoints via
+# environment variables, which take precedence over config-server values.
+#
+# Image names are parameterised so you can push to your own registry:
+#   REGISTRY=<your-dockerhub-user> TAG=latest docker compose build
+#   REGISTRY=<your-dockerhub-user> docker compose push
+
 services:
+  # ---------------------------------------------------------------- infra ----
+  postgres:
+    image: postgres:16
+    container_name: ticketing-postgres
+    environment:
+      POSTGRES_USER: ticketing
+      POSTGRES_PASSWORD: ticketing
+      POSTGRES_DB: ticketing
+    ports:
+      # host 5433 -> container 5432 so a Postgres already running on the host
+      # (default 5432) does not clash. The apps talk to postgres:5432 internally.
+      - "5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ticketing"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   redis:
     image: redis:7-alpine
     container_name: ticketing-redis
@@ -7,6 +39,11 @@ services:
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   kafka:
     image: apache/kafka:3.9.0
@@ -52,6 +89,154 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:19092
       DYNAMIC_CONFIG_ENABLED: "true"
 
+  # ------------------------------------------------------------- platform ----
+  config-server:
+    build: ./config-server
+    image: ${REGISTRY:-shery2k3}/ticketing-config-server:${TAG:-latest}
+    container_name: ticketing-config-server
+    ports:
+      - "8888:8888"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  discovery-server:
+    build: ./discovery-server
+    image: ${REGISTRY:-shery2k3}/ticketing-discovery-server:${TAG:-latest}
+    container_name: ticketing-discovery-server
+    ports:
+      - "8761:8761"
+
+  api-gateway:
+    build: ./api-gateway
+    image: ${REGISTRY:-shery2k3}/ticketing-api-gateway:${TAG:-latest}
+    container_name: ticketing-api-gateway
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      JWT_SECRET: ZJOzP3M3XUY6NAKPbZmCxKT1MjZWW7IuHxFXFSNyKCm
+      JAVA_OPTS: "-XX:MaxRAMPercentage=75.0"
+
+  event-service:
+    build: ./event
+    image: ${REGISTRY:-shery2k3}/ticketing-event-service:${TAG:-latest}
+    container_name: ticketing-event-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ticketing_event
+      SPRING_DATA_REDIS_HOST: redis
+      JAVA_OPTS: "-XX:MaxRAMPercentage=75.0"
+
+  inventory-service:
+    build: ./inventory
+    image: ${REGISTRY:-shery2k3}/ticketing-inventory-service:${TAG:-latest}
+    container_name: ticketing-inventory-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ticketing_inventory
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      JAVA_OPTS: "-XX:MaxRAMPercentage=75.0"
+
+  booking-service:
+    build: ./booking
+    image: ${REGISTRY:-shery2k3}/ticketing-booking-service:${TAG:-latest}
+    container_name: ticketing-booking-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ticketing_booking
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      JAVA_OPTS: "-XX:MaxRAMPercentage=75.0"
+
+  payment-service:
+    build: ./payment
+    image: ${REGISTRY:-shery2k3}/ticketing-payment-service:${TAG:-latest}
+    container_name: ticketing-payment-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ticketing_payment
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      JAVA_OPTS: "-XX:MaxRAMPercentage=75.0"
+
+  notification-service:
+    build: ./notification
+    image: ${REGISTRY:-shery2k3}/ticketing-notification-service:${TAG:-latest}
+    container_name: ticketing-notification-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ticketing_notification
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      JAVA_OPTS: "-XX:MaxRAMPercentage=75.0"
+
 volumes:
   redis-data:
   kafka-data:
+  postgres-data:
