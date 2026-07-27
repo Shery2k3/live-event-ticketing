@@ -8,6 +8,10 @@
 # Image names are parameterised so you can push to your own registry:
 #   REGISTRY=<your-dockerhub-user> TAG=latest docker compose build
 #   REGISTRY=<your-dockerhub-user> docker compose push
+#
+# This file is fully self-contained: the Postgres init SQL is embedded below as
+# a Compose config, so a fresh machine only needs this one file to run the
+# published images (docker compose pull && docker compose up -d).
 
 services:
   # ---------------------------------------------------------------- infra ----
@@ -24,7 +28,10 @@ services:
       - "5433:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./scripts/postgres-init:/docker-entrypoint-initdb.d:ro
+    configs:
+      # creates the five databases on first init of the data volume
+      - source: postgres-init
+        target: /docker-entrypoint-initdb.d/01-create-databases.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ticketing"]
       interval: 10s
@@ -235,6 +242,15 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ticketing_notification
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:19092
       JAVA_OPTS: "-XX:MaxRAMPercentage=75.0"
+
+configs:
+  postgres-init:
+    content: |
+      CREATE DATABASE ticketing_event;
+      CREATE DATABASE ticketing_inventory;
+      CREATE DATABASE ticketing_booking;
+      CREATE DATABASE ticketing_payment;
+      CREATE DATABASE ticketing_notification;
 
 volumes:
   redis-data:
