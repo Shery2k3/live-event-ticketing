@@ -1,20 +1,4 @@
-# Full stack: infrastructure + all Spring Boot services.
-#
-# The application containers reach each other by compose service name on the
-# default network. Every service still keeps localhost values in config-repo for
-# local (non-docker) runs; here we override only the connection endpoints via
-# environment variables, which take precedence over config-server values.
-#
-# Image names are parameterised so you can push to your own registry:
-#   REGISTRY=<your-dockerhub-user> TAG=latest docker compose build
-#   REGISTRY=<your-dockerhub-user> docker compose push
-#
-# This file is fully self-contained: the Postgres init SQL is embedded below as
-# a Compose config, so a fresh machine only needs this one file to run the
-# published images (docker compose pull && docker compose up -d).
-
 services:
-  # ---------------------------------------------------------------- infra ----
   postgres:
     image: postgres:16
     container_name: ticketing-postgres
@@ -23,13 +7,10 @@ services:
       POSTGRES_PASSWORD: ticketing
       POSTGRES_DB: ticketing
     ports:
-      # host 5433 -> container 5432 so a Postgres already running on the host
-      # (default 5432) does not clash. The apps talk to postgres:5432 internally.
       - "5433:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     configs:
-      # creates the five databases on first init of the data volume
       - source: postgres-init
         target: /docker-entrypoint-initdb.d/01-create-databases.sql
     healthcheck:
@@ -65,7 +46,6 @@ services:
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
-      # controller bound to a routable name, NOT 0.0.0.0
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,INTERNAL://0.0.0.0:19092,CONTROLLER://kafka:9093
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:19092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT
@@ -96,7 +76,6 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:19092
       DYNAMIC_CONFIG_ENABLED: "true"
 
-  # ------------------------------------------------------------- platform ----
   config-server:
     build: ./config-server
     image: ${REGISTRY:-shery2k3}/ticketing-config-server:${TAG:-latest}
